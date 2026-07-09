@@ -5,8 +5,8 @@ const config = {
   title: 'HerdLink',
   tagline: 'A direct-to-cell satellite collar concept, demonstrated in software',
   // Served under /docs of the main app's domain in production (see the
-  // root package.json build:vercel script); adjust url to the real domain.
-  url: 'https://herdlink.vercel.app',
+  // root package.json build:vercel script).
+  url: 'https://herdlink.atodev.xyz',
   baseUrl: '/docs/',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
