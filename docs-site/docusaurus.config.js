@@ -4,8 +4,10 @@
 const config = {
   title: 'HerdLink',
   tagline: 'A direct-to-cell satellite collar concept, demonstrated in software',
-  url: 'http://localhost:3000',
-  baseUrl: '/',
+  // Served under /docs of the main app's domain in production (see the
+  // root package.json build:vercel script); adjust url to the real domain.
+  url: 'https://herdlink.vercel.app',
+  baseUrl: '/docs/',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
@@ -30,7 +32,7 @@ const config = {
       navbar: {
         title: 'HerdLink',
         items: [
-          { href: 'http://localhost:5173', label: 'Open the demo ↗', position: 'right' },
+          { href: '/', label: 'Open the demo ↗', position: 'right', target: '_self' },
         ],
       },
       footer: {

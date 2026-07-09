@@ -1,0 +1,5 @@
+{
+  "installCommand": "npm install && npm install --prefix docs-site",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist"
+}

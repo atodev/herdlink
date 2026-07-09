@@ -26,8 +26,9 @@ const WEATHER_MODES: { value: WeatherMode; label: string }[] = [
 
 const BEHAVIOURS: Behaviour[] = ['grazing', 'walking', 'resting', 'ruminating'];
 
-/** Docusaurus site (docs-site/), `npm start` serves it on :3000 */
-const DOCS_URL = 'http://localhost:3000';
+/** Docusaurus site (docs-site/): served under /docs in production builds,
+ * on :3000 via `npm start` during development */
+const DOCS_URL = import.meta.env.PROD ? '/docs/' : 'http://localhost:3000/docs/';
 
 function weatherIcon(rain: number, cloud: number, wind: number, temp: number, dl: number): string {
   if (rain > 0.15 && temp < 2) return '❄️';
