@@ -23,6 +23,7 @@ export default function Sidebar({ sim, analytics, selectedId, onSelect, onChange
   const selected = selectedId != null ? sim.cows.find((c) => c.id === selectedId) : undefined;
   const affected = sim.cows.filter((c) => c.condition !== 'healthy');
   const assessment = selected ? analytics.assessments.get(selected.id) : undefined;
+  const social = analytics.social;
 
   const inject = (cow: Cow, condition: Condition) => {
     setCondition(cow, condition, sim.timeMin);
@@ -92,6 +93,29 @@ export default function Sidebar({ sim, analytics, selectedId, onSelect, onChange
                 ))}
               </ul>
             )}
+            {social && (
+              <dl className="social-dl">
+                <dt>Social strength</dt>
+                <dd>
+                  {(social.strength.get(selected.id) ?? 0).toFixed(1)}
+                  <span className="dim"> / herd {social.meanStrength.toFixed(1)}</span>
+                </dd>
+                <dt>Degree · clustering</dt>
+                <dd>
+                  {social.degree.get(selected.id) ?? 0} ·{' '}
+                  {(social.clustering.get(selected.id) ?? 0).toFixed(2)}
+                </dd>
+                <dt>Community size</dt>
+                <dd>{social.communitySizes.get(social.community.get(selected.id) ?? -1) ?? 1}</dd>
+              </dl>
+            )}
+            <Sparkline
+              label="Social strength, 24 h"
+              series={analytics.strengthHistory.get(selected.id) ?? []}
+              compare={analytics.herdHistory.map((h) => h.socialStrength)}
+              value={(social?.strength.get(selected.id) ?? 0).toFixed(1)}
+              colour="#c77dd8"
+            />
             <Sparkline
               label="Speed, 24 h (herd dashed)"
               series={selected.history.map((h) => h.speed)}

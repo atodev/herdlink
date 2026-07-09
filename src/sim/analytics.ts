@@ -1,5 +1,7 @@
 import { computeFeatureVectors } from './features';
 import { MODEL_CLASSES, predictProbs } from './model';
+import { computeSocial } from './social';
+import type { SocialMetrics } from './social';
 import type { SimState } from './types';
 
 /**
@@ -43,6 +45,8 @@ export interface HerdSample {
   speed: number;
   rumination: number;
   temperature: number;
+  /** herd-mean social strength (weighted degree) */
+  socialStrength: number;
 }
 
 export interface Analytics {
@@ -52,6 +56,12 @@ export interface Analytics {
   alerts: Alert[];
   /** herd-mean baselines over time, for the comparison sparklines */
   herdHistory: HerdSample[];
+  /** social network metrics, refreshed every tick */
+  social: SocialMetrics | null;
+  /** per-cow social strength over time (24 h ring, one point per tick) */
+  strengthHistory: Map<number, number[]>;
+  /** ticks elapsed, for bias-correcting the association EWMA */
+  tickCount: number;
   nextTickAt: number;
 }
 
@@ -66,7 +76,16 @@ const DECAY = 0.985;
 const PROXIMITY_M = 15;
 
 export function createAnalytics(): Analytics {
-  return { assessments: new Map(), association: new Map(), alerts: [], herdHistory: [], nextTickAt: 0 };
+  return {
+    assessments: new Map(),
+    association: new Map(),
+    alerts: [],
+    herdHistory: [],
+    social: null,
+    strengthHistory: new Map(),
+    tickCount: 0,
+    nextTickAt: 0,
+  };
 }
 
 export function pairKey(a: number, b: number): number {
@@ -100,6 +119,20 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
     }
   }
 
+  // --- Social network metrics (bias-corrected association weights) ---
+  an.tickCount++;
+  const correction = 1 - Math.pow(DECAY, an.tickCount);
+  an.social = computeSocial(cows, an.association, pairKey, correction, an.social?.community ?? new Map());
+  for (const cow of cows) {
+    let h = an.strengthHistory.get(cow.id);
+    if (!h) {
+      h = [];
+      an.strengthHistory.set(cow.id, h);
+    }
+    h.push(an.social.strength.get(cow.id) ?? 0);
+    if (h.length > (24 * 60) / TICK_MIN) h.shift();
+  }
+
   // --- Features and herd baselines ---
   const { byId, herd } = computeFeatureVectors(sim);
 
@@ -108,6 +141,7 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
     speed: herd.speed,
     rumination: herd.rumination,
     temperature: herd.temperature,
+    socialStrength: an.social.meanStrength,
   });
   if (an.herdHistory.length > (24 * 60) / TICK_MIN) an.herdHistory.shift();
 

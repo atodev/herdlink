@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Analytics } from '../sim/analytics';
-import { pairKey, scoreColour } from '../sim/analytics';
+import { scoreColour } from '../sim/analytics';
+import { communityColour } from '../sim/social';
 import type { Cow, SimState } from '../sim/types';
 
 interface Node {
@@ -17,13 +18,13 @@ interface Props {
   onSelect: (id: number | null) => void;
 }
 
-/** Edges worth drawing: cows together at least this fraction of recent time */
-const EDGE_MIN = 0.25;
-
 /**
  * Force-directed view of the herd's social structure, built purely from
- * collar proximity data. Sick cows lose their edges and drift out of their
- * cluster — often before any vital sign is conclusive on its own.
+ * collar proximity data. Nodes are coloured by community (label propagation)
+ * and sized by strength (weighted degree); watch/alert status appears as a
+ * halo ring. Selecting a cow highlights her ego network. Sick cows lose
+ * their edges and drift out of their cluster — often before any vital sign
+ * is conclusive on its own.
  */
 export default function NetworkView({ sim, analytics, selectedId, onSelect }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,6 +52,7 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const cows = sim.cows;
+      const social = analytics.social;
       const nodes = nodesRef.current;
       // Seed new nodes from paddock positions so clusters start roughly right
       for (const cow of cows) {
@@ -64,12 +66,14 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
         }
       }
 
-      // Collect display edges
-      const edges: { a: Cow; b: Cow; w: number }[] = [];
-      for (let i = 0; i < cows.length; i++) {
-        for (let j = i + 1; j < cows.length; j++) {
-          const w = analytics.association.get(pairKey(cows[i].id, cows[j].id)) ?? 0;
-          if (w > EDGE_MIN) edges.push({ a: cows[i], b: cows[j], w });
+      const edges = social?.edges ?? [];
+      const selected = selectedRef.current;
+      const egoSet = new Set<number>();
+      if (selected != null) {
+        egoSet.add(selected);
+        for (const e of edges) {
+          if (e.a === selected) egoSet.add(e.b);
+          if (e.b === selected) egoSet.add(e.a);
         }
       }
 
@@ -99,8 +103,9 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
         ni.vy += (centreY - ni.y) * 0.002;
       }
       for (const e of edges) {
-        const na = nodes.get(e.a.id)!;
-        const nb = nodes.get(e.b.id)!;
+        const na = nodes.get(e.a);
+        const nb = nodes.get(e.b);
+        if (!na || !nb) continue;
         const dx = nb.x - na.x;
         const dy = nb.y - na.y;
         const d = Math.hypot(dx, dy) || 1;
@@ -125,42 +130,56 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
       ctx.fillRect(0, 0, cw, ch);
 
       for (const e of edges) {
-        const na = nodes.get(e.a.id)!;
-        const nb = nodes.get(e.b.id)!;
+        const na = nodes.get(e.a);
+        const nb = nodes.get(e.b);
+        if (!na || !nb) continue;
+        const inEgo = selected != null && (e.a === selected || e.b === selected);
+        const dimmed = selected != null && !inEgo;
         ctx.beginPath();
         ctx.moveTo(na.x, na.y);
         ctx.lineTo(nb.x, nb.y);
-        ctx.strokeStyle = `rgba(143, 163, 179, ${Math.min(0.55, e.w * 0.7)})`;
-        ctx.lineWidth = Math.min(2.5, e.w * 3);
+        const alpha = Math.min(0.7, 0.15 + e.w * 0.7) * (dimmed ? 0.25 : 1);
+        ctx.strokeStyle = inEgo ? `rgba(255, 255, 255, ${alpha})` : `rgba(143, 163, 179, ${alpha})`;
+        ctx.lineWidth = Math.max(0.6, Math.min(3, e.w * 4)) * (inEgo ? 1.4 : 1);
         ctx.stroke();
       }
 
       const now = performance.now();
+      const meanStrength = social?.meanStrength ?? 1;
       for (const cow of cows) {
         const node = nodes.get(cow.id)!;
         const score = analytics.assessments.get(cow.id)?.score ?? 0;
         const halo = scoreColour(score);
+        const dimmed = selected != null && !egoSet.has(cow.id);
+
+        // Radius by strength relative to herd mean
+        const s = social?.strength.get(cow.id) ?? 0;
+        const r = 4 + 4 * Math.sqrt(Math.min(2.5, s / Math.max(0.1, meanStrength)));
+
+        ctx.globalAlpha = dimmed ? 0.35 : 1;
 
         if (halo) {
           const pulse = halo === '#e85a5a' ? 2 + Math.sin(now / 250) * 1.5 : 2;
           ctx.beginPath();
-          ctx.arc(node.x, node.y, 8 + pulse, 0, Math.PI * 2);
+          ctx.arc(node.x, node.y, r + 2 + pulse, 0, Math.PI * 2);
           ctx.strokeStyle = halo;
           ctx.lineWidth = 2;
           ctx.stroke();
         }
-        if (cow.id === selectedRef.current || cow.id === hoverRef.current) {
+        if (cow.id === selected || cow.id === hoverRef.current) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, 11, 0, Math.PI * 2);
-          ctx.strokeStyle = cow.id === selectedRef.current ? '#ffffff' : 'rgba(255,255,255,0.6)';
+          ctx.arc(node.x, node.y, r + 5, 0, Math.PI * 2);
+          ctx.strokeStyle = cow.id === selected ? '#ffffff' : 'rgba(255,255,255,0.6)';
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
+        const label = social?.community.get(cow.id);
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = halo ?? '#4fc38a';
+        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = label != null ? communityColour(label) : '#4fc38a';
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
 
       raf = requestAnimationFrame(step);
@@ -174,7 +193,7 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
     const mx = clientX - rect.left;
     const my = clientY - rect.top;
     let best: Cow | null = null;
-    let bestD = 14;
+    let bestD = 16;
     for (const cow of sim.cows) {
       const node = nodesRef.current.get(cow.id);
       if (!node) continue;
@@ -187,6 +206,7 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
     return best;
   };
 
+  const social = analytics.social;
   const hoverCow = hoverId != null ? sim.cows.find((c) => c.id === hoverId) : undefined;
   const hoverNode = hoverId != null ? nodesRef.current.get(hoverId) : undefined;
 
@@ -198,18 +218,44 @@ export default function NetworkView({ sim, analytics, selectedId, onSelect }: Pr
         onMouseLeave={() => setHoverId(null)}
         onClick={(e) => onSelect(findCow(e.clientX, e.clientY)?.id ?? null)}
       />
-      {hoverCow && hoverNode && (
+      {social && (
+        <div className="sg-stats">
+          <div className="sg-title">Herd network</div>
+          <div><span className="dim">ties (backbone)</span> {social.edges.length}</div>
+          <div><span className="dim">density</span> {social.density.toFixed(3)}</div>
+          <div><span className="dim">communities</span> {[...social.communitySizes.values()].filter((s) => s >= 3).length}</div>
+          <div><span className="dim">mean strength</span> {social.meanStrength.toFixed(1)}</div>
+          <div className="sg-hint">
+            colour = community · size = strength{'\n'}click a cow to isolate her ego network
+          </div>
+        </div>
+      )}
+      {hoverCow && hoverNode && social && (
         <div className="tooltip" style={{ left: hoverNode.x, top: hoverNode.y }}>
           <div className="name">{hoverCow.name}</div>
           <div>
-            <span className="dim">Anomaly score: </span>
-            {(analytics.assessments.get(hoverCow.id)?.score ?? 0).toFixed(1)}
+            <span className="dim">strength </span>
+            {(social.strength.get(hoverCow.id) ?? 0).toFixed(1)}
+            <span className="dim"> (herd {social.meanStrength.toFixed(1)})</span>
           </div>
-          {(analytics.assessments.get(hoverCow.id)?.signals ?? []).map((s) => (
-            <div key={s} className="dim">
-              {s}
+          <div>
+            <span className="dim">degree </span>
+            {social.degree.get(hoverCow.id) ?? 0}
+            <span className="dim"> · clustering </span>
+            {(social.clustering.get(hoverCow.id) ?? 0).toFixed(2)}
+          </div>
+          <div>
+            <span className="dim">community size </span>
+            {social.communitySizes.get(social.community.get(hoverCow.id) ?? -1) ?? 1}
+          </div>
+          {(analytics.assessments.get(hoverCow.id)?.score ?? 0) > 1.2 && (
+            <div className="bad">
+              anomaly {(analytics.assessments.get(hoverCow.id)?.score ?? 0).toFixed(1)}
+              {analytics.assessments.get(hoverCow.id)?.suspected
+                ? ` — possible ${analytics.assessments.get(hoverCow.id)!.suspected}`
+                : ''}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
