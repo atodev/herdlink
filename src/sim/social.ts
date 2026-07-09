@@ -9,6 +9,61 @@ import type { Cow } from './types';
  * ≈ "fraction of recent time spent together".
  */
 
+export function pairKey(a: number, b: number): number {
+  return a < b ? a * 100000 + b : b * 100000 + a;
+}
+
+/** association decay per 5-min tick — half-life ≈ 4 h */
+export const ASSOC_DECAY = 0.985;
+/** cows within this range are "associating" */
+export const PROXIMITY_M = 15;
+
+/**
+ * One association tick: decay all pair weights, accumulate for pairs
+ * currently within proximity. Shared by the live detector and the trainer.
+ */
+export function updateAssociation(association: Map<number, number>, cows: Cow[]): void {
+  for (const [k, w] of association) {
+    const dw = w * ASSOC_DECAY;
+    if (dw < 0.01) association.delete(k);
+    else association.set(k, dw);
+  }
+  for (let i = 0; i < cows.length; i++) {
+    for (let j = i + 1; j < cows.length; j++) {
+      const d = Math.hypot(cows[i].x - cows[j].x, cows[i].y - cows[j].y);
+      if (d < PROXIMITY_M) {
+        const k = pairKey(cows[i].id, cows[j].id);
+        // (1 - DECAY) increment → weight settles at "fraction of time together"
+        association.set(k, (association.get(k) ?? 0) + (1 - ASSOC_DECAY));
+      }
+    }
+  }
+}
+
+/**
+ * Weighted degree (strength) per cow from bias-corrected tie weights —
+ * the cheap subset of computeSocial the trainer needs every tick.
+ */
+export function computeStrengths(
+  cows: Cow[],
+  association: Map<number, number>,
+  correction: number,
+): Map<number, number> {
+  const strength = new Map<number, number>();
+  for (const c of cows) strength.set(c.id, 0);
+  for (let i = 0; i < cows.length; i++) {
+    for (let j = i + 1; j < cows.length; j++) {
+      const raw = association.get(pairKey(cows[i].id, cows[j].id));
+      if (!raw) continue;
+      const w = Math.min(1, raw / correction);
+      if (w < TIE_FLOOR) continue;
+      strength.set(cows[i].id, strength.get(cows[i].id)! + w);
+      strength.set(cows[j].id, strength.get(cows[j].id)! + w);
+    }
+  }
+  return strength;
+}
+
 export interface SocialEdge {
   a: number;
   b: number;
@@ -43,7 +98,6 @@ const TIE_FLOOR = 0.05;
 export function computeSocial(
   cows: Cow[],
   association: Map<number, number>,
-  pairKey: (a: number, b: number) => number,
   correction: number,
   prevCommunity: Map<number, number>,
 ): SocialMetrics {

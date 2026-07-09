@@ -1,5 +1,7 @@
 import { computeFeatureVectors, FEATURE_NAMES } from './features';
+import type { SocialInputs } from './features';
 import { createSim, setCondition, stepSim } from './herd';
+import { ASSOC_DECAY, computeStrengths, updateAssociation } from './social';
 import type { Condition } from './types';
 
 /**
@@ -53,10 +55,33 @@ function runEpisode(rows: Row[]): void {
   ];
   let injected = false;
 
+  // Social state, maintained exactly as the live detector does (5-min ticks)
+  const association = new Map<number, number>();
+  const social: SocialInputs = { strength: new Map(), strengthHistory: new Map() };
+  let socialTicks = 0;
+  let nextSocialAt = startMin;
+
   let nextSampleAt = startMin + 12 * 60; // let telemetry buffers warm up first
 
   while (sim.timeMin < endAt) {
     stepSim(sim, STEP_MIN);
+
+    if (sim.timeMin >= nextSocialAt) {
+      nextSocialAt = sim.timeMin + 5;
+      updateAssociation(association, sim.cows);
+      socialTicks++;
+      const correction = 1 - Math.pow(ASSOC_DECAY, socialTicks);
+      social.strength = computeStrengths(sim.cows, association, correction);
+      for (const c of sim.cows) {
+        let h = social.strengthHistory.get(c.id);
+        if (!h) {
+          h = [];
+          social.strengthHistory.set(c.id, h);
+        }
+        h.push(social.strength.get(c.id) ?? 0);
+        if (h.length > (24 * 60) / 5) h.shift();
+      }
+    }
 
     if (!injected && sim.timeMin >= injectAt) {
       for (const p of plan) {
@@ -68,7 +93,7 @@ function runEpisode(rows: Row[]): void {
 
     if (sim.timeMin >= nextSampleAt) {
       nextSampleAt = sim.timeMin + 15;
-      const { byId } = computeFeatureVectors(sim);
+      const { byId } = computeFeatureVectors(sim, social);
 
       const conditioned = sim.cows.filter(
         (c) =>

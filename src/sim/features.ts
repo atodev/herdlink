@@ -14,7 +14,19 @@ export const FEATURE_NAMES = [
   // self-relative: how does she compare to her own recent baseline —
   // separates "naturally slow cow" from "cow that just went slow"
   'dSpeedZ', 'dWalkZ', 'dRumZ',
+  // social: embeddedness in the herd's proximity network, and change vs her
+  // own baseline — separates "naturally peripheral" from "withdrawing"
+  'strengthZ', 'dStrengthZ',
 ] as const;
+
+/** Social inputs to feature extraction, maintained by the caller
+ * (analytics.ts live, trainer.ts during episodes). */
+export interface SocialInputs {
+  /** current social strength (weighted degree) per cow */
+  strength: Map<number, number>;
+  /** strength over time per cow, one point per 5-min tick, 24 h ring */
+  strengthHistory: Map<number, number[]>;
+}
 
 export interface CowFeatures {
   meanSpeed: number;
@@ -26,6 +38,9 @@ export interface CowFeatures {
   dSpeed: number;
   dWalk: number;
   dRum: number;
+  /** social strength (weighted degree) and change vs own baseline */
+  strength: number;
+  dStrength: number;
 }
 
 export interface FeatureSet {
@@ -41,7 +56,7 @@ export interface HerdBaseline {
   temperature: number;
 }
 
-function features(cow: Cow, cx: number, cy: number): CowFeatures {
+function features(cow: Cow, cx: number, cy: number, social?: SocialInputs): CowFeatures {
   const win = cow.history.slice(-WINDOW_SAMPLES);
   let meanSpeed = cow.avgSpeed;
   let walkFrac = 0;
@@ -64,6 +79,17 @@ function features(cow: Cow, cx: number, cy: number): CowFeatures {
     dRum = cow.ruminationRate - baseRum;
   }
 
+  // Social strength now, and change vs own baseline (points 2–24 h old).
+  // Strength itself moves slowly (4 h association half-life), so "recent"
+  // is just the current value.
+  const strength = social?.strength.get(cow.id) ?? 0;
+  let dStrength = 0;
+  const sh = social?.strengthHistory.get(cow.id);
+  if (sh && sh.length >= 2 * WINDOW_SAMPLES) {
+    const baseWin = sh.slice(0, -WINDOW_SAMPLES);
+    dStrength = strength - baseWin.reduce((s, v) => s + v, 0) / baseWin.length;
+  }
+
   return {
     meanSpeed,
     walkFrac,
@@ -73,6 +99,8 @@ function features(cow: Cow, cx: number, cy: number): CowFeatures {
     dSpeed,
     dWalk,
     dRum,
+    strength,
+    dStrength,
   };
 }
 
@@ -86,7 +114,10 @@ function meanStd(values: number[]): { mean: number; std: number } {
  * Herd-relative z-score vectors for every cow. Floors on the standard
  * deviations keep the scores sane when the herd is perfectly synchronised.
  */
-export function computeFeatureVectors(sim: SimState): {
+export function computeFeatureVectors(
+  sim: SimState,
+  social?: SocialInputs,
+): {
   byId: Map<number, FeatureSet>;
   herd: HerdBaseline;
 } {
@@ -102,7 +133,7 @@ export function computeFeatureVectors(sim: SimState): {
   cx /= n;
   cy /= n;
 
-  const feats = cows.map((c) => features(c, cx, cy));
+  const feats = cows.map((c) => features(c, cx, cy, social));
   const speedStats = meanStd(feats.map((f) => f.meanSpeed));
   const walkStats = meanStd(feats.map((f) => f.walkFrac));
   const rumStats = meanStd(feats.map((f) => f.rumination));
@@ -111,6 +142,8 @@ export function computeFeatureVectors(sim: SimState): {
   const dSpeedStats = meanStd(feats.map((f) => f.dSpeed));
   const dWalkStats = meanStd(feats.map((f) => f.dWalk));
   const dRumStats = meanStd(feats.map((f) => f.dRum));
+  const strengthStats = meanStd(feats.map((f) => f.strength));
+  const dStrengthStats = meanStd(feats.map((f) => f.dStrength));
 
   const z = (v: number, s: { mean: number; std: number }, minStd: number) =>
     (v - s.mean) / Math.max(s.std, minStd);
@@ -128,6 +161,8 @@ export function computeFeatureVectors(sim: SimState): {
         z(f.dSpeed, dSpeedStats, 0.03),
         z(f.dWalk, dWalkStats, 0.04),
         z(f.dRum, dRumStats, 0.04),
+        z(f.strength, strengthStats, 0.5),
+        z(f.dStrength, dStrengthStats, 0.3),
       ],
       raw: f,
     });

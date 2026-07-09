@@ -1,7 +1,9 @@
 import { computeFeatureVectors } from './features';
 import { MODEL_CLASSES, predictProbs } from './model';
-import { computeSocial } from './social';
+import { ASSOC_DECAY, computeSocial, pairKey, updateAssociation } from './social';
 import type { SocialMetrics } from './social';
+
+export { pairKey };
 import type { SimState } from './types';
 
 /**
@@ -70,10 +72,6 @@ export const ALERT_AT = 2.0;
 const RESOLVE_AT = 1.0;
 
 const TICK_MIN = 5;
-/** association decay per tick — half-life ≈ 4 h */
-const DECAY = 0.985;
-/** cows within this range are "associating" */
-const PROXIMITY_M = 15;
 
 export function createAnalytics(): Analytics {
   return {
@@ -88,10 +86,6 @@ export function createAnalytics(): Analytics {
   };
 }
 
-export function pairKey(a: number, b: number): number {
-  return a < b ? a * 100000 + b : b * 100000 + a;
-}
-
 let nextAlertId = 1;
 
 /** Run detection + association updates. Call every sim step; ticks itself every TICK_MIN. */
@@ -100,29 +94,14 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
   an.nextTickAt = sim.timeMin + TICK_MIN;
 
   const cows = sim.cows;
-  const n = cows.length;
 
   // --- Association graph: accumulate proximity, decay everything else ---
-  for (const [k, w] of an.association) {
-    const dw = w * DECAY;
-    if (dw < 0.01) an.association.delete(k);
-    else an.association.set(k, dw);
-  }
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const d = Math.hypot(cows[i].x - cows[j].x, cows[i].y - cows[j].y);
-      if (d < PROXIMITY_M) {
-        const k = pairKey(cows[i].id, cows[j].id);
-        // (1 - DECAY) increment → weight settles at "fraction of time together"
-        an.association.set(k, (an.association.get(k) ?? 0) + (1 - DECAY));
-      }
-    }
-  }
+  updateAssociation(an.association, cows);
 
   // --- Social network metrics (bias-corrected association weights) ---
   an.tickCount++;
-  const correction = 1 - Math.pow(DECAY, an.tickCount);
-  an.social = computeSocial(cows, an.association, pairKey, correction, an.social?.community ?? new Map());
+  const correction = 1 - Math.pow(ASSOC_DECAY, an.tickCount);
+  an.social = computeSocial(cows, an.association, correction, an.social?.community ?? new Map());
   for (const cow of cows) {
     let h = an.strengthHistory.get(cow.id);
     if (!h) {
@@ -133,8 +112,11 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
     if (h.length > (24 * 60) / TICK_MIN) h.shift();
   }
 
-  // --- Features and herd baselines ---
-  const { byId, herd } = computeFeatureVectors(sim);
+  // --- Features and herd baselines (telemetry + social) ---
+  const { byId, herd } = computeFeatureVectors(sim, {
+    strength: an.social.strength,
+    strengthHistory: an.strengthHistory,
+  });
 
   an.herdHistory.push({
     t: sim.timeMin,
@@ -147,7 +129,7 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
 
   for (const cow of cows) {
     const fs = byId.get(cow.id)!;
-    const [speedZ, walkZ, rumZ, tempZ, distZ] = fs.z;
+    const [speedZ, walkZ, rumZ, tempZ, distZ, , , , , dStrengthZ] = fs.z;
 
     // --- Trained model inference ---
     const probs = predictProbs(fs.z);
@@ -170,6 +152,7 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
     if (speedZ < -1.2) signals.push(`moving ${Math.round((1 - f.meanSpeed / Math.max(herd.speed, 0.01)) * 100)}% slower than herd`);
     if (walkZ > 1.5) signals.push('restless — walking far more than herd');
     if (distZ > 1.5) signals.push(`${Math.round(f.centroidDist)} m from herd centre`);
+    if (dStrengthZ < -1.5) signals.push('social withdrawal — association strength falling vs her own baseline');
 
     an.assessments.set(cow.id, {
       cowId: cow.id,

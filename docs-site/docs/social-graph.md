@@ -5,9 +5,32 @@ title: Social graph
 
 # Social graph
 
-Source: `src/sim/analytics.ts` (association tracking), `src/sim/social.ts` (network
-metrics), `src/ui/NetworkView.tsx` (rendering). Toggle to it with **Social graph** in the
-top bar.
+Source: `src/sim/social.ts` (association tracking and network metrics),
+`src/ui/NetworkView.tsx` (rendering). Toggle to it with **Social graph** in the top bar.
+
+## The terms, in plain language
+
+Social network analysis (SNA) has its own vocabulary. Everything on the graph view maps
+to one of these:
+
+| Term | Plain meaning | In this demo |
+| --- | --- | --- |
+| **Node** | A dot — one individual | One cow |
+| **Tie** (edge) | A line between two nodes — a relationship | Two cows that spend time near each other |
+| **Tie weight** | How strong the relationship is | Fraction of recent time the pair spent within 15 m (0–1); drawn as line thickness |
+| **Degree** | How many ties a node has | How many regular companions a cow has |
+| **Strength** (weighted degree) | Degree, but counting tie weights — total relationship "volume" | The cow's overall social embeddedness; drawn as node size |
+| **Density** | Of all the ties that *could* exist, how many do | How tightly knit the herd is overall |
+| **Clustering coefficient** | Do your friends know each other? 1 = your companions all associate with each other (a clique), 0 = they don't | Whether a cow lives in a tight sub-group or bridges between groups |
+| **Community** | A cluster of nodes with many ties inside, few outside | A grazing clique; drawn as node colour |
+| **Ego network** | One node plus its direct ties — the network from her point of view | What you see when you click a cow: her ties brighten, everything else dims |
+| **Backbone** | The important subset of ties, with noise stripped out | What's actually drawn (see below) |
+
+## What it is
+
+Cattle herds have real, stable social structure — grazing partners, companion pairs,
+consistent neighbours. Because every collar reports position, that structure falls out of
+the data for free: no extra sensor, just proximity over time.
 
 ## What it is
 
@@ -62,7 +85,32 @@ often visible before fever peaks or rumination fully collapses. In the demo:
 It's also the feature that most clearly goes beyond what incumbent collars surface:
 per-cow activity alerts are table stakes; a live herd sociogram with community structure
 and per-animal centrality — built from data the collar already collects — is a
-differentiated product surface. Natural extensions from here: feeding social-strength
-deltas into the [detection model](./detection) as a learned feature, oestrus detection
-via directed approach patterns, and dominance-hierarchy inference from displacement
-events at water/shade.
+differentiated product surface.
+
+## From graph to learned feature
+
+The network isn't just a visual — it feeds the [detection model](./detection) directly.
+Two of the model's ten input features are social:
+
+- **`strengthZ`** — her strength compared to the rest of the herd right now. Low
+  strength means she's socially peripheral… but some healthy cows just *are* peripheral,
+  which is why this feature alone would false-alarm. So:
+- **`dStrengthZ`** — her strength now compared to **her own baseline** (2–24 h ago).
+  This is the withdrawal *event*: a naturally aloof cow scores ~0 (she matches her own
+  baseline), while a previously well-connected cow whose ties are dissolving scores
+  strongly negative.
+
+This herd-relative + self-relative pairing mirrors how the behavioural features work,
+and it's the classic SNA insight applied to health monitoring: **the change in an
+individual's network position is more informative than the position itself.**
+
+The training pipeline maintains the same association tracker during its simulated
+episodes, so the model learns from exactly the signal the live system computes. The
+measured effect: illness detection got faster (the strength collapse begins within the
+association half-life, often leading the rumination signal), and when social withdrawal
+contributes to an alert it appears in the alert's explanation
+("social withdrawal — association strength falling vs her own baseline").
+
+Natural extensions from here: oestrus detection via directed approach patterns,
+dominance-hierarchy inference from displacement events at water/shade, and community
+stability as a herd-level welfare indicator.

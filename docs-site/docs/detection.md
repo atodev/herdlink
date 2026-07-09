@@ -13,7 +13,7 @@ only [collar telemetry](./telemetry) — the detector has no access to the injec
 
 ## Features
 
-Eight features per cow, in two families:
+Ten features per cow, in three families:
 
 **Herd-relative** — how does she compare to everyone else *right now*? Z-scores against
 the current herd distribution for: mean speed (2 h window), walking fraction, rumination
@@ -23,10 +23,17 @@ rate, body temperature, and distance from the herd centroid.
 last 2 hours and her 2–24 h-ago history, for speed, walking fraction, and rumination
 (themselves z-scored across the herd).
 
-Both families matter, and the demo's development history proves it: with herd-relative
-features alone, the model persistently flagged naturally slow cows as lame and naturally
-active ones as in oestrus. The self-relative deltas fix exactly that — a naturally slow
-cow matches her own baseline; a newly lame cow deviates from it.
+**Social** — her position in the herd's proximity network (see
+[the social graph](./social-graph#from-graph-to-learned-feature)): current social
+strength relative to the herd, and the change in strength against her own baseline —
+the social-withdrawal signal.
+
+The relative/self pairing matters, and the demo's development history proves it: with
+herd-relative features alone, the model persistently flagged naturally slow cows as lame
+and naturally active ones as in oestrus. The self-relative deltas fix exactly that — a
+naturally slow cow matches her own baseline; a newly lame cow deviates from it. The same
+logic drove the social pair: peripheral-by-nature is normal, *becoming* peripheral is
+the signal.
 
 > **Baselines are the herd and the self, never a fixed threshold.** In a heatwave
 > everyone's temperature rises; in a storm everyone stops grazing. Herd-relative features
@@ -35,16 +42,17 @@ cow matches her own baseline; a newly lame cow deviates from it.
 
 ## The trained model
 
-The scorer is a **multinomial logistic regression** over the eight features, with four
+The scorer is a **multinomial logistic regression** over the ten features, with four
 output classes: `healthy`, `ill`, `lame`, `oestrus`. It is trained offline by
 `npm run train`:
 
 1. **Data generation** — 12 randomised simulation episodes (60 cows, 36 sim-hours each,
-   weather fronts rolling through). After a 12 h telemetry warm-up, two cows per
-   condition are injected at the 18 h mark. Feature vectors are harvested every 15
-   sim-minutes; condition samples only count as positives once the condition has been
-   active 2.5 h (early onset looks healthy and would poison the labels). ~10,000
-   labelled rows.
+   weather fronts rolling through), with the proximity-association tracker running
+   throughout so social features are computed exactly as the live system computes them.
+   After a 12 h telemetry warm-up, two cows per condition are injected at the 18 h mark.
+   Feature vectors are harvested every 15 sim-minutes; condition samples only count as
+   positives once the condition has been active 2.5 h (early onset looks healthy and
+   would poison the labels). ~10,000 labelled rows.
 2. **Training** — full-batch gradient descent with L2 regularisation, **healthy samples
    weighted 3×**. That weighting is a product decision as much as a modelling one: on a
    farm, false alarms destroy trust in the system faster than a slow detection, and
@@ -92,8 +100,9 @@ model never trained on:
 - **6 h forced heatwave → 0 alerts**, **6 h forced snow → 0 alerts** (herd-relative
   features doing their job)
 - Injecting one ill, one lame, one oestrus cow → **all three detected with the correct
-  suspected cause** (lameness in ~2 h, illness in ~2.5 h, oestrus in ~3.5 h), no false
-  positives alongside.
+  suspected cause** (illness in ~2.5 h, oestrus in ~2.5 h, lameness in ~4 h), no false
+  positives alongside. Adding the social features measurably sped up illness and oestrus
+  detection versus the telemetry-only model.
 
 ## Scaling the model up
 
