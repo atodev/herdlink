@@ -5,6 +5,7 @@ import type { Behaviour, WeatherMode } from './sim/types';
 import NetworkView from './ui/NetworkView';
 import PaddockCanvas from './ui/PaddockCanvas';
 import Sidebar from './ui/Sidebar';
+import TrainButton from './ui/TrainButton';
 
 /** sim-minutes per real second at each speed setting */
 const SPEEDS = [
@@ -109,6 +110,7 @@ export default function App() {
         <button className="why-button" onClick={() => window.open(DOCS_URL, '_blank')}>
           Docs ↗
         </button>
+        <TrainButton />
         <div className="controls">
           <span className="label">View</span>
           <button className={view === 'paddock' ? 'active' : ''} onClick={() => setView('paddock')}>

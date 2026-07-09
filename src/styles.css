@@ -369,9 +369,26 @@ button.link {
   cursor: pointer;
 }
 
-.why-button:hover {
+.why-button:hover:not(:disabled) {
   background: var(--accent);
   color: #0c1410;
+}
+
+.why-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.train-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.train-flash {
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .statusbar {

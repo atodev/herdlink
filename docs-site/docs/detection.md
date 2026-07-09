@@ -51,8 +51,18 @@ output classes: `healthy`, `ill`, `lame`, `oestrus`. It is trained offline by
    conditions are sustained anyway — the smoothing layer will still catch them.
 3. **Shipping** — weights land in `src/sim/model.json` (a few hundred bytes) and are
    bundled into the browser app. Inference is a handful of multiplies per cow — no
-   runtime dependency. Held-out confusion: healthy 98.5% recall, ill 100%, lame ~87%,
-   oestrus ~94%.
+   runtime dependency. Typical held-out recall: healthy ~99%, ill 100%, lame ~80–90%,
+   oestrus ~93%.
+
+### Retraining in the browser
+
+The app is static-hostable (e.g. Vercel), so the same pipeline also runs entirely
+in the browser: the **Retrain model** button in the top bar executes the full
+simulate → fit → evaluate loop in a **Web Worker** (off the main thread — the demo keeps
+running), hot-swaps the live model when it finishes, and persists it to localStorage for
+future visits. `npm run train` and the button share the exact same code
+(`src/sim/trainer.ts`); the node script's only extra job is baking the default
+`model.json` into the bundle.
 
 The interpretation layer stays transparent: every alert lists the exact telemetry
 signals behind it ("rumination 8 min/h vs herd 22; 96 m from herd centre"), computed

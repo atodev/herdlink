@@ -14,6 +14,9 @@ main view (paddock or social graph), sidebar, status bar.
 - **Weather chip** — icon (sun/cloud/rain/wind/snow/moon), ambient temperature, wind
   speed. Hover for rain and cloud percentages.
 - **Docs ↗** — opens this documentation.
+- **Retrain model** — re-runs the full [training pipeline](./detection#the-trained-model)
+  in a Web Worker (simulated episodes → logistic regression) and hot-swaps the live
+  detection model; the result persists in localStorage.
 - **View** — switches between the paddock map and the [social graph](./social-graph).
 - **Weather dropdown** — Auto lets fronts roll through on their own; Sunny, Heatwave,
   Rain, Windy, and Snow force conditions immediately ([weather](./weather)).
