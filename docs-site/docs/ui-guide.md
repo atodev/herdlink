@@ -11,12 +11,12 @@ main view (paddock or social graph), sidebar, status bar.
 ## Top bar
 
 - **Clock** — sim time, `Day N HH:MM`. The sim starts at 07:00 on day 1.
-- **Weather chip** — icon (sun/cloud/rain/wind/moon), ambient temperature, wind speed.
-  Hover for rain and cloud percentages.
+- **Weather chip** — icon (sun/cloud/rain/wind/snow/moon), ambient temperature, wind
+  speed. Hover for rain and cloud percentages.
 - **Docs ↗** — opens this documentation.
 - **View** — switches between the paddock map and the [social graph](./social-graph).
-- **Weather** — Auto lets fronts roll through on their own; the presets force conditions
-  ([weather](./weather)).
+- **Weather dropdown** — Auto lets fronts roll through on their own; Sunny, Heatwave,
+  Rain, Windy, and Snow force conditions immediately ([weather](./weather)).
 - **Speed** — from real time (1×) to 30 sim-minutes per second. 10 min/s is the sweet
   spot for watching a health event develop; 30 min/s shows the full daily rhythm in
   under a minute.

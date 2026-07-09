@@ -15,11 +15,12 @@ const SPEEDS = [
 ];
 
 const WEATHER_MODES: { value: WeatherMode; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
+  { value: 'auto', label: 'Auto (fronts roll through)' },
   { value: 'sunny', label: 'Sunny' },
   { value: 'heatwave', label: 'Heatwave' },
   { value: 'rain', label: 'Rain' },
   { value: 'windy', label: 'Windy' },
+  { value: 'snow', label: 'Snow' },
 ];
 
 const BEHAVIOURS: Behaviour[] = ['grazing', 'walking', 'resting', 'ruminating'];
@@ -28,6 +29,7 @@ const BEHAVIOURS: Behaviour[] = ['grazing', 'walking', 'resting', 'ruminating'];
 const DOCS_URL = 'http://localhost:3000';
 
 function weatherIcon(rain: number, cloud: number, wind: number, temp: number, dl: number): string {
+  if (rain > 0.15 && temp < 2) return '❄️';
   if (rain > 0.3) return '🌧';
   if (wind > 8) return '💨';
   if (dl < 0.25) return '🌙';
@@ -116,18 +118,20 @@ export default function App() {
             Social graph
           </button>
           <span className="label">Weather</span>
-          {WEATHER_MODES.map((m) => (
-            <button
-              key={m.value}
-              className={w.mode === m.value ? 'active' : ''}
-              onClick={() => {
-                setWeatherMode(sim, m.value);
-                setRevision((r) => r + 1);
-              }}
-            >
-              {m.label}
-            </button>
-          ))}
+          <select
+            className="weather-select"
+            value={w.mode}
+            onChange={(e) => {
+              setWeatherMode(sim, e.target.value as WeatherMode);
+              setRevision((r) => r + 1);
+            }}
+          >
+            {WEATHER_MODES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
           <span className="label">Speed</span>
           {SPEEDS.map((s, i) => (
             <button

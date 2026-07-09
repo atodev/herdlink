@@ -12,10 +12,14 @@ carries live **ambient temperature, wind, rain, and cloud cover**, plus a
 ## Weather generation
 
 In **Auto** mode a new front rolls through every 3–8 sim-hours: mostly fair spells, with
-occasional wet fronts, blustery days, and the odd heatwave. Current conditions relax
-towards the front's targets over about an hour, and a diurnal swing (±4 °C, peaking
-mid-afternoon) rides on top. The top-bar buttons (**Sunny / Heatwave / Rain / Windy**)
-force a preset immediately — useful for demoing a specific effect.
+occasional wet fronts, blustery days, the odd heatwave, and the occasional cold snap with
+snow. Current conditions relax towards the front's targets over about an hour, and a
+diurnal swing (±4 °C, peaking mid-afternoon) rides on top. The **weather dropdown** in
+the top bar (Sunny / Heatwave / Rain / Windy / Snow) forces a preset immediately —
+useful for demoing a specific effect.
+
+Precipitation falls as **snow** whenever the air temperature is near freezing (below
+~2 °C) — so the forced Snow preset and a cold Auto front render identically.
 
 ## Behavioural effects
 
@@ -27,6 +31,7 @@ All grounded in documented cattle behaviour:
 | **Strong wind** (above 7 m/s) | Grazing suppressed, more standing rumination, herd bunches |
 | **Heat** (hot + bright + midday) | Grazing collapses, the herd walks to the **shade trees** and packs in tight; body temperature rises herd-wide |
 | **Cold** (below 8 °C, daytime) | Grazing increases — energy demand |
+| **Snow** (precipitation near freezing) | Pasture is buried: grazing collapses, cows stand ruminating in a tight bunch rather than lie in snow; the field whitens and flakes drift with the wind |
 | **Night** | The normal overnight rest/rumination pattern; paddock rendering darkens |
 
 Rendering follows suit: rain streaks slant with the wind, a wind arrow appears in the

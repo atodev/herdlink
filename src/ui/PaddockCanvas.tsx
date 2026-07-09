@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Analytics } from '../sim/analytics';
 import { scoreColour } from '../sim/analytics';
-import { daylight } from '../sim/herd';
+import { daylight, isSnowing } from '../sim/herd';
 import type { Behaviour, Cow, SimState } from '../sim/types';
 
 const BEHAVIOUR_COLOUR: Record<Behaviour, string> = {
@@ -79,6 +79,12 @@ export default function PaddockCanvas({ sim, analytics, selectedId, onSelect }: 
       grad.addColorStop(1, `rgb(${g1.join(',')})`);
       ctx.fillStyle = grad;
       ctx.fillRect(px(0), py(0), pw * scale, ph * scale);
+
+      // Snow cover whitens the field while it's snowing
+      if (isSnowing(weather)) {
+        ctx.fillStyle = `rgba(214, 224, 236, ${weather.rain * 0.4})`;
+        ctx.fillRect(px(0), py(0), pw * scale, ph * scale);
+      }
 
       // Shade trees
       ctx.beginPath();
@@ -159,13 +165,29 @@ export default function PaddockCanvas({ sim, analytics, selectedId, onSelect }: 
         }
       }
 
-      // Rain
+      // Precipitation: slanted streaks for rain, drifting flakes for snow
+      const snowing = isSnowing(weather);
       const wantDrops = Math.round(weather.rain * 180);
       while (drops.length < wantDrops) {
         drops.push({ x: Math.random() * cw, y: Math.random() * ch, len: 6 + Math.random() * 8, speed: 6 + Math.random() * 5 });
       }
       drops.length = Math.min(drops.length, wantDrops);
-      if (drops.length > 0) {
+      if (drops.length > 0 && snowing) {
+        ctx.fillStyle = 'rgba(235, 242, 250, 0.8)';
+        for (const d of drops) {
+          ctx.beginPath();
+          // len doubles as flake size seed, speed as sway phase
+          ctx.arc(d.x + Math.sin((now / 600) + d.speed) * 6, d.y, 1 + (d.len % 3) * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          d.y += 0.6 + (d.len % 3) * 0.3;
+          d.x += weather.windSpeed * 0.04;
+          if (d.y > ch) {
+            d.y = -6;
+            d.x = Math.random() * cw;
+          }
+          if (d.x > cw) d.x = 0;
+        }
+      } else if (drops.length > 0) {
         const slant = weather.windSpeed * 0.25;
         ctx.strokeStyle = 'rgba(160, 190, 215, 0.35)';
         ctx.lineWidth = 1;

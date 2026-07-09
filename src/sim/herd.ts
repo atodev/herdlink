@@ -70,7 +70,13 @@ const WEATHER_PRESETS: Record<Exclude<WeatherMode, 'auto'>, Weather['target']> =
   heatwave: { ambientTemp: 31, windSpeed: 1.5, rain: 0, cloud: 0.05 },
   rain: { ambientTemp: 13, windSpeed: 6, rain: 0.8, cloud: 0.95 },
   windy: { ambientTemp: 15, windSpeed: 12, rain: 0.1, cloud: 0.6 },
+  snow: { ambientTemp: -1, windSpeed: 4, rain: 0.7, cloud: 0.9 },
 };
+
+/** Precipitation falls as snow below ~2 °C. */
+export function isSnowing(w: Weather): boolean {
+  return w.rain > 0.15 && w.ambientTemp < 2;
+}
 
 function createWeather(): Weather {
   return {
@@ -101,10 +107,11 @@ function updateWeather(sim: SimState, dtMin: number): void {
   if (w.mode === 'auto' && sim.timeMin >= w.nextFrontAt) {
     // A new front every 3–8 h: mostly fair, occasionally wet or blustery
     const r = Math.random();
-    if (r < 0.55) w.target = { ambientTemp: rand(14, 24), windSpeed: rand(1, 5), rain: 0, cloud: rand(0.1, 0.5) };
-    else if (r < 0.75) w.target = { ambientTemp: rand(10, 15), windSpeed: rand(4, 9), rain: rand(0.4, 0.9), cloud: rand(0.8, 1) };
-    else if (r < 0.9) w.target = { ambientTemp: rand(12, 18), windSpeed: rand(9, 14), rain: rand(0, 0.2), cloud: rand(0.4, 0.8) };
-    else w.target = { ambientTemp: rand(27, 33), windSpeed: rand(1, 3), rain: 0, cloud: rand(0, 0.15) };
+    if (r < 0.5) w.target = { ambientTemp: rand(14, 24), windSpeed: rand(1, 5), rain: 0, cloud: rand(0.1, 0.5) };
+    else if (r < 0.7) w.target = { ambientTemp: rand(10, 15), windSpeed: rand(4, 9), rain: rand(0.4, 0.9), cloud: rand(0.8, 1) };
+    else if (r < 0.85) w.target = { ambientTemp: rand(12, 18), windSpeed: rand(9, 14), rain: rand(0, 0.2), cloud: rand(0.4, 0.8) };
+    else if (r < 0.93) w.target = { ambientTemp: rand(27, 33), windSpeed: rand(1, 3), rain: 0, cloud: rand(0, 0.15) };
+    else w.target = { ambientTemp: rand(-3, 1), windSpeed: rand(2, 6), rain: rand(0.4, 0.8), cloud: rand(0.8, 1) };
     w.nextFrontAt = sim.timeMin + rand(180, 480);
   }
 
@@ -196,7 +203,14 @@ function behaviourWeights(sim: SimState): Record<Behaviour, number> {
   else w = { grazing: 0.3, walking: 0.04, resting: 0.28, ruminating: 0.38 }; // midday
 
   const weather = sim.weather;
-  if (weather.rain > 0.3) {
+  if (isSnowing(weather)) {
+    // Snow buries the pasture: grazing collapses, cows stand ruminating in a bunch
+    const snow = weather.rain;
+    w.grazing *= 1 - 0.55 * snow;
+    w.resting *= 1 - 0.4 * snow; // won't lie in snow
+    w.ruminating *= 1 + 0.6 * snow;
+    w.walking *= 1 - 0.3 * snow;
+  } else if (weather.rain > 0.3) {
     // Wet cattle stand and wait it out — less grazing, far less lying down
     const wet = weather.rain;
     w.grazing *= 1 - 0.5 * wet;
@@ -216,8 +230,8 @@ function behaviourWeights(sim: SimState): Record<Behaviour, number> {
     w.walking *= 1 - 0.4 * heat;
     w.resting *= 1 + 1.2 * heat;
   }
-  // Mild cold pushes energy demand up → more grazing (daytime only)
-  if (weather.ambientTemp < 8 && !night) w.grazing *= 1.25;
+  // Mild cold pushes energy demand up → more grazing (daytime, pasture not buried)
+  if (weather.ambientTemp < 8 && !night && !isSnowing(weather)) w.grazing *= 1.25;
   return w;
 }
 

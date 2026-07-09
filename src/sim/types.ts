@@ -63,7 +63,7 @@ export interface Paddock {
   shadeRadius: number;
 }
 
-export type WeatherMode = 'auto' | 'sunny' | 'heatwave' | 'rain' | 'windy';
+export type WeatherMode = 'auto' | 'sunny' | 'heatwave' | 'rain' | 'windy' | 'snow';
 
 export interface Weather {
   mode: WeatherMode;
@@ -73,7 +73,7 @@ export interface Weather {
   windSpeed: number;
   /** radians, direction the wind blows TOWARDS */
   windDir: number;
-  /** rain intensity 0–1 */
+  /** precipitation intensity 0–1; falls as snow when ambientTemp is near freezing */
   rain: number;
   /** cloud cover 0–1 */
   cloud: number;

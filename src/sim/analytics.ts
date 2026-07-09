@@ -1,12 +1,23 @@
-import type { Cow, SimState } from './types';
+import { computeFeatureVectors } from './features';
+import { MODEL_CLASSES, predictProbs } from './model';
+import type { SimState } from './types';
 
 /**
  * The detection layer. It sees ONLY collar telemetry (position, speed,
  * behaviour, temperature, rumination) — never the injected ground-truth
- * condition — and scores each cow against the rest of the herd.
+ * condition. Herd-relative z-features (src/sim/features.ts) feed a trained
+ * multinomial logistic regression (src/sim/model.json, fitted offline by
+ * scripts/train.ts); the z-scores double as human-readable alert signals.
  */
 
 export type Suspected = 'illness' | 'lameness' | 'oestrus';
+
+/** model classes are ground-truth condition names; alerts speak farmer */
+const SUSPECTED_BY_CLASS: Record<string, Suspected> = {
+  ill: 'illness',
+  lame: 'lameness',
+  oestrus: 'oestrus',
+};
 
 export interface Assessment {
   cowId: number;
@@ -53,8 +64,6 @@ const TICK_MIN = 5;
 const DECAY = 0.985;
 /** cows within this range are "associating" */
 const PROXIMITY_M = 15;
-/** history window for behaviour aggregates: 2 h of 5-min samples */
-const WINDOW_SAMPLES = 24;
 
 export function createAnalytics(): Analytics {
   return { assessments: new Map(), association: new Map(), alerts: [], herdHistory: [], nextTickAt: 0 };
@@ -62,37 +71,6 @@ export function createAnalytics(): Analytics {
 
 export function pairKey(a: number, b: number): number {
   return a < b ? a * 100000 + b : b * 100000 + a;
-}
-
-interface CowFeatures {
-  meanSpeed: number;
-  walkFrac: number;
-  rumination: number;
-  temperature: number;
-  centroidDist: number;
-}
-
-function features(cow: Cow, cx: number, cy: number): CowFeatures {
-  const win = cow.history.slice(-WINDOW_SAMPLES);
-  let meanSpeed = cow.avgSpeed;
-  let walkFrac = 0;
-  if (win.length > 0) {
-    meanSpeed = win.reduce((s, h) => s + h.speed, 0) / win.length;
-    walkFrac = win.filter((h) => h.behaviour === 'walking').length / win.length;
-  }
-  return {
-    meanSpeed,
-    walkFrac,
-    rumination: cow.ruminationRate,
-    temperature: cow.temperature,
-    centroidDist: Math.hypot(cow.x - cx, cow.y - cy),
-  };
-}
-
-function meanStd(values: number[]): { mean: number; std: number } {
-  const mean = values.reduce((s, v) => s + v, 0) / values.length;
-  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
-  return { mean, std: Math.sqrt(variance) };
 }
 
 let nextAlertId = 1;
@@ -122,66 +100,40 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
     }
   }
 
-  // --- Herd baselines ---
-  let cx = 0;
-  let cy = 0;
-  for (const c of cows) {
-    cx += c.x;
-    cy += c.y;
-  }
-  cx /= n;
-  cy /= n;
-
-  const feats = cows.map((c) => features(c, cx, cy));
-  const speedStats = meanStd(feats.map((f) => f.meanSpeed));
-  const walkStats = meanStd(feats.map((f) => f.walkFrac));
-  const rumStats = meanStd(feats.map((f) => f.rumination));
-  const tempStats = meanStd(feats.map((f) => f.temperature));
-  const distStats = meanStd(feats.map((f) => f.centroidDist));
+  // --- Features and herd baselines ---
+  const { byId, herd } = computeFeatureVectors(sim);
 
   an.herdHistory.push({
     t: sim.timeMin,
-    speed: speedStats.mean,
-    rumination: rumStats.mean,
-    temperature: tempStats.mean,
+    speed: herd.speed,
+    rumination: herd.rumination,
+    temperature: herd.temperature,
   });
   if (an.herdHistory.length > (24 * 60) / TICK_MIN) an.herdHistory.shift();
 
-  // Floors keep z-scores sane when the herd is perfectly synchronised
-  const z = (v: number, s: { mean: number; std: number }, minStd: number) =>
-    (v - s.mean) / Math.max(s.std, minStd);
+  for (const cow of cows) {
+    const fs = byId.get(cow.id)!;
+    const [speedZ, walkZ, rumZ, tempZ, distZ] = fs.z;
 
-  for (let i = 0; i < n; i++) {
-    const cow = cows[i];
-    const f = feats[i];
-
-    const speedZ = z(f.meanSpeed, speedStats, 0.03);
-    const walkZ = z(f.walkFrac, walkStats, 0.04);
-    const rumZ = z(f.rumination, rumStats, 0.05);
-    const tempZ = z(f.temperature, tempStats, 0.12);
-    const distZ = z(f.centroidDist, distStats, 12);
-
-    // Cause-specific scores, all scaled so ~2 means "clearly abnormal"
-    const illness = 0.55 * Math.max(0, tempZ) + 0.45 * Math.max(0, -rumZ) + 0.35 * Math.max(0, distZ);
-    const lameness = 0.9 * Math.max(0, -speedZ) + 0.35 * Math.max(0, distZ) - 0.6 * Math.max(0, tempZ);
-    const oestrus = 0.9 * Math.max(0, walkZ) + 0.5 * Math.max(0, speedZ) - 0.5 * Math.max(0, -rumZ);
-
-    const causes: [Suspected, number][] = [
-      ['illness', illness],
-      ['lameness', lameness],
-      ['oestrus', oestrus],
-    ];
-    causes.sort((a, b) => b[1] - a[1]);
-    const [topCause, raw] = causes[0];
+    // --- Trained model inference ---
+    const probs = predictProbs(fs.z);
+    const pHealthy = probs[0];
+    let top = 1;
+    for (let c = 2; c < probs.length; c++) if (probs[c] > probs[top]) top = c;
+    const topCause = SUSPECTED_BY_CLASS[MODEL_CLASSES[top]];
+    // score scaled so ALERT_AT (2.0) needs P(healthy) ≈ 0.1 sustained — the
+    // model must be confidently, persistently wrong about "healthy" to page
+    const raw = 2.2 * (1 - pHealthy);
 
     const prev = an.assessments.get(cow.id);
-    // EWMA over ~45 sim-min so alerts need a sustained signal, not one bad sample
-    const score = (prev?.score ?? 0) * 0.89 + Math.max(0, raw) * 0.11;
+    // EWMA over ~1 sim-hour so alerts need a sustained signal, not one bad sample
+    const score = (prev?.score ?? 0) * 0.92 + raw * 0.08;
 
+    const f = fs.raw;
     const signals: string[] = [];
-    if (tempZ > 1.2) signals.push(`temp ${f.temperature.toFixed(1)} °C (herd ${tempStats.mean.toFixed(1)})`);
-    if (rumZ < -1.2) signals.push(`rumination ${Math.round(f.rumination * 60)} min/h vs herd ${Math.round(rumStats.mean * 60)}`);
-    if (speedZ < -1.2) signals.push(`moving ${Math.round((1 - f.meanSpeed / Math.max(speedStats.mean, 0.01)) * 100)}% slower than herd`);
+    if (tempZ > 1.2) signals.push(`temp ${f.temperature.toFixed(1)} °C (herd ${herd.temperature.toFixed(1)})`);
+    if (rumZ < -1.2) signals.push(`rumination ${Math.round(f.rumination * 60)} min/h vs herd ${Math.round(herd.rumination * 60)}`);
+    if (speedZ < -1.2) signals.push(`moving ${Math.round((1 - f.meanSpeed / Math.max(herd.speed, 0.01)) * 100)}% slower than herd`);
     if (walkZ > 1.5) signals.push('restless — walking far more than herd');
     if (distZ > 1.5) signals.push(`${Math.round(f.centroidDist)} m from herd centre`);
 
