@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/sim/analytics.ts","./src/sim/herd.ts","./src/sim/types.ts","./src/ui/networkview.tsx","./src/ui/paddockcanvas.tsx","./src/ui/sidebar.tsx","./src/ui/sparkline.tsx"],"version":"5.9.3"}

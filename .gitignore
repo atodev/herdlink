@@ -1,0 +1,6 @@
+node_modules/
+dist/
+build/
+.docusaurus/
+.DS_Store
+*.log

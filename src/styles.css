@@ -1,0 +1,375 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #10151a;
+  --panel: #1a222b;
+  --border: #2b3743;
+  --text: #dce6ee;
+  --text-dim: #8fa3b3;
+  --accent: #4fc38a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.topbar h1 span {
+  color: var(--accent);
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--text-dim);
+  min-width: 130px;
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.controls .label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+
+.controls button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.controls button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c1410;
+  font-weight: 600;
+}
+
+.main-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sidebar h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.sidebar .hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.cow-card .cow-name {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.cow-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.cow-card dt {
+  color: var(--text-dim);
+}
+
+.cow-card dd {
+  text-align: right;
+}
+
+.inject-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inject-buttons button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.inject-buttons button:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+
+.inject-buttons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bad {
+  color: #e87a5a;
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
+.affected-list {
+  list-style: none;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(16, 21, 26, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 230px;
+  transform: translate(14px, 14px);
+  z-index: 10;
+}
+
+.tooltip .name {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tooltip .dim {
+  color: var(--text-dim);
+}
+
+.weather-chip {
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: rgba(16, 21, 26, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.legend-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-ring {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: inline-block;
+}
+
+.legend-line {
+  width: 14px;
+  height: 0;
+  border-top: 2px dashed #e8c15a;
+  display: inline-block;
+}
+
+.alert-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.alert-list li {
+  border-left: 3px solid #e85a5a;
+  padding-left: 8px;
+}
+
+.alert-list li.alert-resolved {
+  border-left-color: var(--border);
+  opacity: 0.6;
+}
+
+.alert-msg {
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.signal-list {
+  list-style: none;
+  font-size: 11px;
+  color: #e8a15a;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.signal-list li::before {
+  content: '▲ ';
+  font-size: 9px;
+}
+
+.warn {
+  color: #e8a15a;
+}
+
+.sparkline {
+  margin-bottom: 10px;
+}
+
+.sparkline-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.sparkline svg {
+  display: block;
+  width: 100%;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.why-button {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.why-button:hover {
+  background: var(--accent);
+  color: #0c1410;
+}
+
+.statusbar {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 18px;
+}

@@ -1,0 +1,3 @@
+i applied to Halter for a ML role and they didn't even give me an interview. I would like to build a demonstration of  a better collar than they have right now using DTC and starlink at a fraction of the cost.
+the product (collar) will have have several enhancements that the existing product does not have.
+the demo will show a UI with a herd of cows and depict a network graph with mouseover of individual cows and behavioural characteristics - ie this cow is moving slower then the herd  is it unwell. 
