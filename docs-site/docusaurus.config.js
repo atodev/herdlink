@@ -8,6 +8,7 @@ const config = {
   // root package.json build:vercel script).
   url: 'https://herdlink.atodev.xyz',
   baseUrl: '/docs/',
+  favicon: 'img/favicon.svg',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
@@ -31,6 +32,7 @@ const config = {
       colorMode: { defaultMode: 'dark', respectPrefersColorScheme: true },
       navbar: {
         title: 'HerdLink',
+        logo: { alt: 'HerdLink', src: 'img/favicon.svg' },
         items: [
           { href: '/', label: 'Open the demo ↗', position: 'right', target: '_self' },
         ],
