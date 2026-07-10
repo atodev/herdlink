@@ -32,12 +32,6 @@ Cattle herds have real, stable social structure — grazing partners, companion 
 consistent neighbours. Because every collar reports position, that structure falls out of
 the data for free: no extra sensor, just proximity over time.
 
-## What it is
-
-Cattle herds have real, stable social structure — grazing partners, companion pairs,
-consistent neighbours. Because every collar reports position, that structure falls out of
-the data for free: no extra sensor, just proximity over time.
-
 ## Building the network
 
 **Association estimation.** Every 5 sim-minutes, each pair of cows within **15 m**
