@@ -12,6 +12,8 @@ const config = {
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
+  markdown: { mermaid: true },
+  themes: ['@docusaurus/theme-mermaid'],
   presets: [
     [
       'classic',

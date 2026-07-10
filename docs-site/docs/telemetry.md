@@ -10,6 +10,50 @@ Source: `src/sim/herd.ts` (generation), `src/sim/types.ts` (schema),
 collar would uplink — and the [detection layer](./detection) is only allowed to see this
 stream, never the simulation's internal state.
 
+## The pipeline at a glance
+
+```mermaid
+flowchart LR
+  subgraph collar["🐄 On the collar"]
+    direction TB
+    gnss["GNSS fix<br/>(duty-cycled)"]
+    imu["IMU<br/>accelerometer"]
+    therm["Contact<br/>thermistor"]
+    cls["Activity classifier<br/>grazing · walking · resting · ruminating"]
+    agg["5-min sample<br/>position · speed · behaviour<br/>temperature · rumination"]
+    imu --> cls
+    gnss --> agg
+    cls --> agg
+    therm --> agg
+  end
+
+  agg -- "~20 bytes per message<br/>≈ 6 KB/cow/day" --> sat["🛰 Starlink NTN<br/>direct-to-cell uplink"]
+  sat --> buf
+
+  subgraph app["📊 Herd monitor"]
+    direction TB
+    buf["24 h ring buffer<br/>288 samples per cow"]
+    feats["Feature extraction<br/>herd-relative · self-baseline · social"]
+    model["Trained model<br/>P(healthy / ill / lame / oestrus)"]
+    buf --> feats --> model
+    model --> alerts["Alert feed +<br/>watch/alert rings"]
+    buf --> spark["24 h sparklines"]
+  end
+
+  subgraph social["🕸 Social layer"]
+    assoc["Proximity association<br/>pairs within 15 m"]
+    graphv["Social graph<br/>strength · communities"]
+    assoc --> graphv
+  end
+
+  buf --> assoc
+  graphv --> feats
+```
+
+Everything left of the satellite runs on the collar; everything right of it is what this
+demo implements. The fence-control loop stays on-collar — the satellite link only
+carries telemetry summaries and alerts, so link latency is never on the critical path.
+
 ## The uplink message
 
 Every **5 sim-minutes** each collar records a sample:
