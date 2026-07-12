@@ -1,0 +1,13 @@
+level,regime,fp_per_cowday,ci
+telemetry,auto,0.0094,0.0046
+telemetry,heatwave,0.0061,0.0037
+telemetry,snow,0.0056,0.0029
+telemetry,rain,0.0083,0.0046
+self,auto,0.0067,0.0034
+self,heatwave,0.0094,0.0037
+self,snow,0.0067,0.0034
+self,rain,0.0100,0.0053
+social,auto,0.0061,0.0033
+social,heatwave,0.0072,0.0034
+social,snow,0.0067,0.0034
+social,rain,0.0078,0.0044

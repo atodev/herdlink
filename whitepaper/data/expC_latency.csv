@@ -1,0 +1,10 @@
+level,condition,median_min,iqr_lo,iqr_hi,detection_rate
+telemetry,ill,145.5,140.5,150.5,1.000
+telemetry,lame,238.0,196.8,355.5,1.000
+telemetry,oestrus,165.5,151.8,179.3,1.000
+self,ill,145.5,141.8,150.5,1.000
+self,lame,238.0,196.8,354.3,1.000
+self,oestrus,168.0,155.5,180.5,1.000
+social,ill,145.5,141.8,150.5,1.000
+social,lame,273.0,201.8,379.3,1.000
+social,oestrus,168.0,156.8,180.5,1.000

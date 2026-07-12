@@ -1,0 +1,5 @@
+regime telemetry self social
+auto 0.0094 0.0067 0.0061
+heatwave 0.0061 0.0094 0.0072
+snow 0.0056 0.0067 0.0067
+rain 0.0083 0.0100 0.0078
