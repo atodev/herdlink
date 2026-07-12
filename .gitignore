@@ -5,5 +5,7 @@ build/
 .DS_Store
 *.log
 
-# Local-only draft
+# Local-only drafts
 blog.md
+whitepaper/
+tsconfig.tsbuildinfo

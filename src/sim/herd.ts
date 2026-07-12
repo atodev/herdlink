@@ -1,3 +1,4 @@
+import { random, randn } from './rng';
 import type { Behaviour, Condition, Cow, SimState, Weather, WeatherMode } from './types';
 import { HISTORY_SAMPLES, SAMPLE_INTERVAL_MIN } from './types';
 
@@ -7,13 +8,7 @@ const COW_NAMES = [
   'Tilly', 'Nellie', 'Flora', 'Betsy', 'Marigold', 'Pip', 'Sage', 'Fern',
 ];
 
-const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
-const randn = () => {
-  // Box–Muller, one sample
-  const u = 1 - Math.random();
-  const v = Math.random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-};
+const rand = (lo: number, hi: number) => lo + random() * (hi - lo);
 
 /** Typical walking/grazing speeds in m/s */
 const SPEED: Record<Behaviour, number> = {
@@ -106,7 +101,7 @@ function updateWeather(sim: SimState, dtMin: number): void {
 
   if (w.mode === 'auto' && sim.timeMin >= w.nextFrontAt) {
     // A new front every 3–8 h: mostly fair, occasionally wet or blustery
-    const r = Math.random();
+    const r = random();
     if (r < 0.5) w.target = { ambientTemp: rand(14, 24), windSpeed: rand(1, 5), rain: 0, cloud: rand(0.1, 0.5) };
     else if (r < 0.7) w.target = { ambientTemp: rand(10, 15), windSpeed: rand(4, 9), rain: rand(0.4, 0.9), cloud: rand(0.8, 1) };
     else if (r < 0.85) w.target = { ambientTemp: rand(12, 18), windSpeed: rand(9, 14), rain: rand(0, 0.2), cloud: rand(0.4, 0.8) };
@@ -268,7 +263,7 @@ function pickBehaviour(sim: SimState, cow: Cow): Behaviour {
 
   let total = 0;
   for (const b of Object.keys(weights) as Behaviour[]) total += weights[b];
-  let r = Math.random() * total;
+  let r = random() * total;
   for (const b of Object.keys(weights) as Behaviour[]) {
     r -= weights[b];
     if (r <= 0) return b;
@@ -296,7 +291,7 @@ export function stepSim(sim: SimState, dtMin: number): void {
     sim.focusY = sim.paddock.shadeY;
     sim.focusUntil = sim.timeMin + 120;
     for (const cow of sim.cows) {
-      if (Math.random() < 0.8) {
+      if (random() < 0.8) {
         cow.behaviour = 'walking';
         cow.behaviourUntil = sim.timeMin + boutLength('walking');
       }
@@ -312,7 +307,7 @@ export function stepSim(sim: SimState, dtMin: number): void {
     sim.focusUntil = sim.timeMin + rand(90, 240);
     // A herd move pulls most cows into a walking bout
     for (const cow of sim.cows) {
-      if (Math.random() < 0.8) {
+      if (random() < 0.8) {
         cow.behaviour = 'walking';
         cow.behaviourUntil = sim.timeMin + boutLength('walking');
       }

@@ -1,8 +1,18 @@
 import { computeFeatureVectors, FEATURE_NAMES } from './features';
 import type { SocialInputs } from './features';
 import { createSim, setCondition, stepSim } from './herd';
+import { random, setSeed } from './rng';
 import { ASSOC_DECAY, computeStrengths, updateAssociation } from './social';
 import type { Condition } from './types';
+
+/** In-place Fisher–Yates shuffle using the shared (seedable) RNG. */
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 /**
  * Training pipeline for the detection model. Pure TypeScript, no node or DOM
@@ -47,7 +57,7 @@ function runEpisode(rows: Row[]): void {
   const endAt = startMin + 36 * 60;
 
   // Two cows per condition, chosen up front
-  const shuffled = [...sim.cows].sort(() => Math.random() - 0.5);
+  const shuffled = shuffle([...sim.cows]);
   const plan: { cowId: number; condition: Condition }[] = [
     ...shuffled.slice(0, 2).map((c) => ({ cowId: c.id, condition: 'ill' as Condition })),
     ...shuffled.slice(2, 4).map((c) => ({ cowId: c.id, condition: 'lame' as Condition })),
@@ -109,21 +119,41 @@ function runEpisode(rows: Row[]): void {
       const healthy = sim.cows.filter((c) => c.condition === 'healthy');
       const take = injected ? conditioned.length || 2 : 3;
       for (let i = 0; i < take; i++) {
-        const cow = healthy[Math.floor(Math.random() * healthy.length)];
+        const cow = healthy[Math.floor(random() * healthy.length)];
         rows.push({ x: byId.get(cow.id)!.z, y: 0 });
       }
     }
   }
 }
 
-function softmax(logits: number[]): number[] {
+/**
+ * Harvest labelled feature vectors from one seeded episode. Used by the
+ * evaluation harness (scripts/evaluate.ts) to build reproducible datasets;
+ * seeding makes the whole episode — herd layout, behaviour, weather,
+ * condition assignment — deterministic.
+ */
+export function harvestEpisode(seed: number): Row[] {
+  setSeed(seed);
+  const rows: Row[] = [];
+  runEpisode(rows);
+  return rows;
+}
+
+export function softmax(logits: number[]): number[] {
   const m = Math.max(...logits);
   const exps = logits.map((l) => Math.exp(l - m));
   const s = exps.reduce((a, b) => a + b, 0);
   return exps.map((e) => e / s);
 }
 
-function fit(
+/**
+ * Cost-sensitive multinomial logistic regression by full-batch gradient
+ * descent. Feature-family ablation is done by the caller zeroing masked
+ * columns of every row's `x` before fitting: their gradients vanish and
+ * (under L2) their weights stay at zero, so an ablated model still has the
+ * full 10-wide shape and runs through the unchanged live inference path.
+ */
+export function fit(
   rows: Row[],
   onProgress?: (p: TrainProgress) => void,
 ): { weights: number[][]; bias: number[] } {
@@ -187,7 +217,7 @@ export function trainModel(onProgress?: (p: TrainProgress) => void): TrainedMode
   }
 
   // Shuffle, hold out 20% for evaluation
-  rows.sort(() => Math.random() - 0.5);
+  shuffle(rows);
   const split = Math.floor(rows.length * 0.8);
   const trainRows = rows.slice(0, split);
   const testRows = rows.slice(split);

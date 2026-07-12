@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "train": "tsx scripts/train.ts",
+    "evaluate": "tsx scripts/evaluate.ts",
     "build:vercel": "npm run build && npm run build --prefix docs-site && cp -R docs-site/build dist/docs"
   },
   "dependencies": {
