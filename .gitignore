@@ -4,3 +4,6 @@ build/
 .docusaurus/
 .DS_Store
 *.log
+
+# Local-only draft
+blog.md
