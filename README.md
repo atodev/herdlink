@@ -6,7 +6,7 @@
 
 **A next-generation analytics layer for cattle collars — herd-relative health analytics plus social-network analysis — demonstrated end-to-end in software.**
 
-🐄 **Live demo:** [herdlink.atodev.xyz](https://herdlink.atodev.xyz/) · 📚 **Docs:** [herdlink.atodev.xyz/docs](https://herdlink.atodev.xyz/docs/)
+🐄 **Live demo:** [herdlink.atodev.xyz](https://herdlink.atodev.xyz/) · 📚 **Docs:** [herdlink.atodev.xyz/docs](https://herdlink.atodev.xyz/docs/) · 📄 **White paper:** [PDF](whitepaper/main.pdf)
 
 ---
 
@@ -60,6 +60,15 @@ npm start            # docs on :3000/docs/
 ```
 
 Deployment is a single Vercel project: `npm run build:vercel` builds the app and the docs and serves both from one domain (`/` and `/docs`).
+
+## White paper
+
+A peer-review-style write-up of the method and its evaluation lives in [`whitepaper/`](whitepaper/) — read the compiled [PDF](whitepaper/main.pdf) or the [LaTeX source](whitepaper/main.tex). It is an **in-silico study**: every result comes from a seeded, reproducible harness (`npm run evaluate`, 30 replicates) rather than real-herd data, and the paper foregrounds that limitation. Notably, its rigorous ablation reports a *null* result — the social-network features give no detection-latency benefit once spatial withdrawal is captured by herd-centroid distance — while confirming the robust finding: near-zero false alarms under weather shifts.
+
+```bash
+npm run evaluate     # regenerate whitepaper/data/ (30 seeded replicates)
+cd whitepaper && make # compile main.pdf (needs a TeX distribution)
+```
 
 ---
 
