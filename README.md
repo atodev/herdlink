@@ -4,7 +4,7 @@
 
 # HerdLink
 
-**A next-generation cattle collar concept — direct-to-cell satellite connectivity plus herd-relative health analytics — demonstrated end-to-end in software.**
+**A next-generation analytics layer for cattle collars — herd-relative health analytics plus social-network analysis — demonstrated end-to-end in software.**
 
 🐄 **Live demo:** [herdlink.atodev.xyz](https://herdlink.atodev.xyz/) · 📚 **Docs:** [herdlink.atodev.xyz/docs](https://herdlink.atodev.xyz/docs/)
 
@@ -12,11 +12,11 @@
 
 ## What this is
 
-Virtual-fencing collars (Halter et al.) currently require a radio base station on every farm — capex, site surveys, install crews. HerdLink demonstrates the alternative architecture: a collar that talks **directly to satellite (Starlink NTN)**, removing on-farm infrastructure entirely, paired with a smarter analytics layer that flags unwell cows from collar telemetry alone.
+Virtual-fencing collars put a sensor on every animal, around the clock — but nearly all of them ship the same health feature: per-cow activity/rumination alerts against a fixed threshold, which drown in false alarms whenever weather shifts the whole herd at once. HerdLink demonstrates a smarter analytics layer that flags unwell cows from the telemetry collars already collect — scoring every cow **relative to the herd and to her own history**, and reading the herd's **social network** to catch withdrawal, one of the earliest sickness signals.
 
 There is no hardware here — the demo makes the case that the defensible value in this category is the **ML and UX layer**, and proves that layer works:
 
-- A realistic **herd simulation** (80 cows, circadian behaviour rhythms, herd social structure, weather- and daylight-coupled behaviour) emits the telemetry a real collar would uplink: GPS, speed, activity class, body temperature, rumination — ~20 bytes per message, one message per 5 minutes.
+- A realistic **herd simulation** (80 cows, circadian behaviour rhythms, herd social structure, weather- and daylight-coupled behaviour) emits the telemetry a real collar reports: GPS, speed, activity class, body temperature, rumination — a compact ~20-byte sample every 5 minutes.
 - A **trained detection model** (multinomial logistic regression over herd-relative + self-baseline features, fitted on ~10k labelled samples from randomised sim episodes) scores every cow continuously. It sees telemetry only — never the simulation's ground truth.
 - You **inject hidden conditions** (lameness, illness, oestrus) and watch the detector find them: plain-language alerts, a live **social graph** where sick cows visibly detach from their grazing cluster, and 24-hour cow-vs-herd sparklines.
 
@@ -44,7 +44,7 @@ Bonus: the **Retrain model** button re-runs the entire training pipeline (12 sim
 | UI | `src/ui/` | Canvas paddock renderer, force-directed social graph, sidebar |
 | Docs | `docs-site/` | Docusaurus, served under `/docs` |
 
-Fully client-side — no backend. See the [docs](https://herdlink.atodev.xyz/docs/) for the reasoning behind each piece, including the [direct-to-cell cost case](https://herdlink.atodev.xyz/docs/comparison) and the [detection method](https://herdlink.atodev.xyz/docs/detection).
+Fully client-side — no backend. See the [docs](https://herdlink.atodev.xyz/docs/) for the reasoning behind each piece, including [what makes it different](https://herdlink.atodev.xyz/docs/comparison) and the [detection method](https://herdlink.atodev.xyz/docs/detection).
 
 ## Development
 

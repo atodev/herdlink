@@ -1,46 +1,56 @@
 ---
 sidebar_position: 2
-title: Why direct-to-cell
+title: What makes it different
 ---
 
-# Why direct-to-cell — HerdLink vs. tower-based collars
+# What makes it different
 
-Concept comparison against a typical tower-based virtual-fencing collar (Halter's current
-architecture is the reference point). Figures are illustrative — the argument is
-architectural: **removing per-farm infrastructure removes the biggest cost and install
-barrier in the category.**
+Every virtual-fencing collar on the market sells health alerts. HerdLink's claim isn't a
+new sensor or a new radio — it's what you do with the data the collar already collects.
+The difference is entirely in the analytics layer, and it comes down to three ideas.
 
-| | Tower-based collar | HerdLink concept |
-| --- | --- | --- |
-| **Connectivity** | Proprietary LoRa mesh — collar → farm base station → backhaul | Direct-to-cell satellite (Starlink NTN) — collar talks straight to orbit |
-| **On-farm infrastructure** | Solar/powered base station per farm, sited for line-of-sight coverage | None — zero towers, zero trenching, zero site surveys |
-| **Install** | Scheduled install crew; tower commissioned before the first collar goes live | Collars ship by courier; farmer bolts them on, herd is live the same day |
-| **Coverage** | Limited by tower line-of-sight — gullies and back blocks can be dead zones | Satellite footprint — every paddock, including remote lease blocks |
-| **Cost structure** | Collar hardware + tower capex + install labour, recovered through subscription | Collar BOM + satellite data only — no capex to amortise, lower subscription |
-| **Health analytics** | Per-cow activity and rumination alerts | Herd-relative detection plus social-graph isolation signals — sick cows flagged before vitals alone are conclusive |
-| **Weather robustness** | Fixed behavioural baselines can drift in storms and heat | Herd-relative scoring is weather-invariant — the whole herd shifts together, individuals still stand out |
+## 1. Score against the herd, not a fixed threshold
 
-## The connectivity bet
+The incumbent approach watches each cow against her own fixed baseline and alarms on
+deviation. The problem is that behaviour is driven by things that move the *whole herd*
+at once — weather, feed, time of day. A heatwave lifts every temperature on the farm; a
+storm halves everyone's grazing. Fixed thresholds either fire on all of it (and the
+farmer stops trusting the app) or get detuned until they miss real cases.
 
-Starlink's direct-to-cell service (and the broader 3GPP NTN standard) lets an ordinary
-cellular modem chip talk to satellites — no dish, no gateway. For a collar this changes
-the unit economics twice over:
+HerdLink scores every feature **relative to the current herd distribution**. When the
+whole herd shifts together, the distribution moves with it and nobody stands out — the
+sick individual only surfaces when she deviates *from her peers*. See
+[the detection layer](./detection) for the method and
+[weather](./weather) for the demonstration: force a heatwave or a snowstorm and watch the
+false-alarm rate stay at zero.
 
-- **Capex disappears.** No base station means no site survey, no install crew, no tower
-  maintenance visits, and no coverage engineering per farm. The marginal cost of adding
-  a farm is the collars themselves.
-- **The addressable market widens.** Tower economics only work above a certain herd
-  density. Satellite collars work identically for a 40-cow lease block in the back
-  country and a 1,000-cow dairy platform.
+## 2. Read the herd's social network
 
-Telemetry volumes are tiny — the demo's collar sends a sample every 5 minutes (position,
-speed, behaviour class, temperature, rumination), well within NTN message budgets. Virtual
-fencing control loops run on-collar; the uplink only carries telemetry and alerts, so
-satellite latency is not on the critical path.
+A collar network is also a **social network observatory**: every position report is a
+proximity observation, and proximity over time reveals the herd's social structure — who
+grazes with whom, which animals cluster, who sits central and who peripheral.
 
-## The software bet
+This matters because **social withdrawal is one of the earliest, most reliable sickness
+signals in cattle**, often visible before fever peaks or rumination collapses. It needs
+no extra hardware — it is latent in data every collar already produces. HerdLink turns it
+into live network metrics and, crucially, into a
+[learned detection feature](./social-graph#from-graph-to-learned-feature). No incumbent
+surfaces a live herd sociogram; it is a genuinely differentiated product surface.
 
-The rest of this documentation covers the software claim: that
-[herd-relative detection](./detection) plus the [social graph](./social-graph) surfaces
-health events earlier and more robustly than per-cow thresholds — and the demo lets you
-verify that claim live against injected ground truth.
+## 3. The change is the signal, not the state
+
+The unifying idea behind both: HerdLink pairs every herd-relative feature with a
+**self-relative** one. It doesn't just ask "is she slow / peripheral / quiet?" — some
+healthy cows simply are. It asks "is she *becoming* slow / peripheral / quiet, relative
+to her own recent baseline?" A naturally aloof cow matches her own history and stays
+quiet; a cow whose ties are dissolving lights up. That distinction is what lets the
+system be sensitive without being noisy.
+
+## Verified, not asserted
+
+The demo is built to be falsifiable. Inject a hidden condition into a random cow — nothing
+marks her on screen — and watch whether the detector finds it. On herds the model never
+trained on: **zero false alerts** across 24 h of healthy grazing plus forced heatwave and
+snow, and every injected condition (illness, lameness, oestrus) caught with the correct
+suspected cause within two to four sim-hours. The [detection page](./detection) has the
+numbers.

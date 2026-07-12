@@ -3,7 +3,7 @@
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'HerdLink',
-  tagline: 'A direct-to-cell satellite collar concept, demonstrated in software',
+  tagline: 'Herd-relative and social-network analytics for cattle collars, demonstrated in software',
   // Served under /docs of the main app's domain in production (see the
   // root package.json build:vercel script).
   url: 'https://herdlink.atodev.xyz',

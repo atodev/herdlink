@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <!-- HerdLink: herd cluster (green), one detached cow on alert (red ring),
-       direct-to-cell satellite signal arcs (blue) -->
+       connectivity signal arcs (blue) -->
   <rect width="64" height="64" rx="14" fill="#10151a"/>
   <path d="M42 10 a16 16 0 0 1 13 13" stroke="#5aa7e8" stroke-width="4.5" fill="none" stroke-linecap="round"/>
   <path d="M44 19 a8 8 0 0 1 6 6" stroke="#5aa7e8" stroke-width="4.5" fill="none" stroke-linecap="round"/>

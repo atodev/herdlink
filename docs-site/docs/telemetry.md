@@ -6,9 +6,9 @@ title: Collar telemetry
 # Collar telemetry
 
 Source: `src/sim/herd.ts` (generation), `src/sim/types.ts` (schema),
-`src/sim/features.ts` (feature derivation). Every cow emits the data stream a real DTC
-collar would uplink — and the [detection layer](./detection) is only allowed to see this
-stream, never the simulation's internal state.
+`src/sim/features.ts` (feature derivation). Every cow emits the data stream a real collar
+reports — and the [detection layer](./detection) is only allowed to see this stream, never
+the simulation's internal state.
 
 ## The pipeline at a glance
 
@@ -27,8 +27,7 @@ flowchart LR
     therm --> agg
   end
 
-  agg -- "~20 bytes per message<br/>≈ 6 KB/cow/day" --> sat["🛰 Starlink NTN<br/>direct-to-cell uplink"]
-  sat --> buf
+  agg -- "~20 bytes per sample<br/>≈ 6 KB/cow/day" --> buf
 
   subgraph app["📊 Herd monitor"]
     direction TB
@@ -50,11 +49,11 @@ flowchart LR
   graphv --> feats
 ```
 
-Everything left of the satellite runs on the collar; everything right of it is what this
-demo implements. The fence-control loop stays on-collar — the satellite link only
-carries telemetry summaries and alerts, so link latency is never on the critical path.
+Everything in the "on the collar" box is derived on-device; everything to the right is
+what this demo implements. The collar reports *derived telemetry* — a compact 5-minute
+summary — not raw sensor data, which is what keeps the data volume tiny.
 
-## The uplink message
+## The telemetry sample
 
 Every **5 sim-minutes** each collar records a sample:
 
@@ -67,7 +66,7 @@ Every **5 sim-minutes** each collar records a sample:
 | `temperature` | °C | Body temperature | Contact thermistor (or ear-tag partner device) |
 | `rumination` | 0–1 | Fraction of recent time ruminating | Accumulated from the activity classifier |
 
-As JSON (the demo's in-memory form — a real uplink would pack this far smaller):
+As JSON (the demo's in-memory form — a real feed would pack this far smaller):
 
 ```json
 {
@@ -80,15 +79,14 @@ As JSON (the demo's in-memory form — a real uplink would pack this far smaller
 }
 ```
 
-### Fits a satellite budget
+### Compact by design
 
-Packed as binary, this is **~20 bytes per message**: position quantised to the paddock
+Packed as binary, this is **~20 bytes per sample**: position quantised to the paddock
 (2 × 2 bytes), speed (1), behaviour class (2 bits), temperature offset (1), rumination
-(1), timestamp delta (2), plus header. At one message per 5 minutes that is **~6 KB per
-cow per day** — comfortably inside direct-to-cell NTN message budgets, which is the point:
-the [connectivity architecture](./comparison) works because the collar sends *derived
-telemetry*, not raw sensor data. The heavy lifting (activity classification, fence logic)
-runs on-collar; the satellite link carries summaries and alerts.
+(1), timestamp delta (2), plus header. At one sample per 5 minutes that is **~6 KB per
+cow per day**, because the collar sends *derived telemetry*, not raw sensor data. The
+heavy lifting — activity classification, fence logic — runs on-collar; only the compact
+summary and alerts leave the device.
 
 ## How each signal behaves in the sim
 
