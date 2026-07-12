@@ -4,6 +4,8 @@
 
 # HerdLink
 
+**By Tom Butler**
+
 **A next-generation analytics layer for cattle collars — herd-relative health analytics plus social-network analysis — demonstrated end-to-end in software.**
 
 🐄 **Live demo:** [herdlink.atodev.xyz](https://herdlink.atodev.xyz/) · 📚 **Docs:** [herdlink.atodev.xyz/docs](https://herdlink.atodev.xyz/docs/) · 📄 **White paper:** [PDF](whitepaper/main.pdf)
