@@ -21,6 +21,7 @@ layer can be demonstrated end-to-end in software.
 
 | Piece | What it does |
 | --- | --- |
+| [Visual overview](./overview) | A slide-by-slide walkthrough of the whole idea — start here for the picture |
 | [Herd simulation](./herd-simulation) | 80 cows with realistic daily behaviour rhythms, herd movement, and social structure |
 | [Collar telemetry](./telemetry) | Synthetic GPS, speed, behaviour, temperature, and rumination streams per cow |
 | [Health conditions](./health-conditions) | Injectable ground truth — lameness, illness, oestrus — with realistic behavioural signatures |
