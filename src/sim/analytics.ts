@@ -181,6 +181,19 @@ export function tickAnalytics(an: Analytics, sim: SimState): void {
   }
 }
 
+/**
+ * Dismiss a cow's monitoring state: resolve its active alerts and reset its
+ * anomaly score. Called when the user manually cures a cow (an operator
+ * acknowledging the animal is well) so the alert and ring clear at once
+ * instead of lingering while vitals settle.
+ */
+export function clearCow(an: Analytics, cowId: number, timeMin: number): void {
+  for (const a of an.alerts) {
+    if (a.cowId === cowId && a.resolvedAt === null) a.resolvedAt = timeMin;
+  }
+  an.assessments.delete(cowId);
+}
+
 /** Colour for a score, shared by paddock and network views. */
 export function scoreColour(score: number): string | null {
   if (score > ALERT_AT) return '#e85a5a';
