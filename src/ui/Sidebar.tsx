@@ -1,5 +1,5 @@
 import type { Analytics } from '../sim/analytics';
-import { ALERT_AT, clearCow, WATCH_AT } from '../sim/analytics';
+import { ALERT_AT, WATCH_AT } from '../sim/analytics';
 import type { Condition, Cow, SimState } from '../sim/types';
 import { formatSimClock, setCondition } from '../sim/herd';
 import Sparkline from './Sparkline';
@@ -27,8 +27,6 @@ export default function Sidebar({ sim, analytics, selectedId, onSelect, onChange
 
   const inject = (cow: Cow, condition: Condition) => {
     setCondition(cow, condition, sim.timeMin);
-    // Curing is an operator acknowledgement: clear the cow's alert and score too
-    if (condition === 'healthy') clearCow(analytics, cow.id, sim.timeMin);
     onChanged();
   };
 

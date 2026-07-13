@@ -57,13 +57,6 @@ export function setCondition(cow: Cow, condition: Condition, timeMin: number): v
   cow.conditionSince = condition === 'healthy' ? null : timeMin;
   // Re-pick behaviour soon so the change shows quickly
   cow.behaviourUntil = Math.min(cow.behaviourUntil, timeMin + 2);
-  if (condition === 'healthy') {
-    // Recovery: clear the lingering physiological anomalies (fever, collapsed
-    // rumination) so a cured animal returns to normal immediately rather than
-    // staying flagged for hours while its vitals relax back on their own.
-    cow.temperature = BASE_TEMP;
-    cow.ruminationRate = 0.35;
-  }
 }
 
 /** Presets the forced weather modes drive towards */
